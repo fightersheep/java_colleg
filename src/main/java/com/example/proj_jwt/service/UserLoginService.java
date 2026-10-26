@@ -1,10 +1,6 @@
 package com.example.proj_jwt.service;
 
-
-import com.example.proj_jwt.dto.LoginRequest;
-import com.example.proj_jwt.dto.LoginResponse;
-import com.example.proj_jwt.dto.RegisterRequest;
-import com.example.proj_jwt.dto.UserResponse;
+import com.example.proj_jwt.dto.*;
 import com.example.proj_jwt.entity.Role;
 import com.example.proj_jwt.entity.RoleName;
 import com.example.proj_jwt.entity.User;
@@ -37,7 +33,7 @@ public class UserLoginService {
     private final PasswordEncoder passwordEncoder;
 
     /**
-     * 1. AuthenticationManager checks name + password (throws BadCredentialsException if wrong)
+     * 1. AuthenticationManager checks name and password (throws BadCredentialsException if wrong)
      * 2. JwtUtil creates a signed token for the authenticated user
      */
     public LoginResponse login(LoginRequest request) {
@@ -45,13 +41,15 @@ public class UserLoginService {
                 new UsernamePasswordAuthenticationToken(request.username(), request.password()));
 
         UserDetails userDetails = (UserDetails) authentication.getPrincipal();
-        String token = jwtUtil.generateToken(userDetails);
+        String token = jwtUtil.generateRefreshToken(userDetails);
+
+        String accessToken = jwtUtil.generateAccessToken(userDetails);
 
         List<String> roles = userDetails.getAuthorities().stream()
                 .map(GrantedAuthority::getAuthority)
                 .toList();
 
-        return new LoginResponse(token, "Bearer", jwtUtil.getExpirationMs(),
+        return new LoginResponse(token, "Bearer",jwtUtil.getRefreshexpirationMs(),accessToken,"Bearer",  jwtUtil.getExpirationMs(),
                 userDetails.getUsername(), roles);
     }
 
@@ -73,4 +71,18 @@ public class UserLoginService {
 
         return UserResponse.from(userRepository.save(user));
     }
+
+    public accessTokenResponse generateAccessToken(Authentication authentication) {
+
+        UserDetails userDetails = (UserDetails) authentication.getPrincipal();
+        String accessToken = jwtUtil.generateAccessToken(userDetails);
+
+        List<String> roles = userDetails.getAuthorities().stream()
+                .map(GrantedAuthority::getAuthority)
+                .toList();
+
+        return new accessTokenResponse(accessToken, "Bearer", jwtUtil.getExpirationMs(),
+                userDetails.getUsername(), roles);
+    }
+
 }

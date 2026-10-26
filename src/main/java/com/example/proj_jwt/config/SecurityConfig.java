@@ -43,12 +43,13 @@ public class SecurityConfig {
 
                 // Authorization rules - checked top to bottom, first match wins
                 .authorizeHttpRequests(auth -> auth
+                        .requestMatchers("/api/auth/accessToken").authenticated()
                         .requestMatchers("/api/auth/**", "/api/public/**", "/error").permitAll()
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")   // needs ROLE_ADMIN
                         .requestMatchers("/api/user/**").hasRole("USER")     // needs ROLE_USER
                         .anyRequest().authenticated())
 
-                // 401 = who are you? (no/invalid token)   403 = I know you, but no permission
+                // 401 = who are you? (no/invalid token) 403 = I know you, but no permission
                 .exceptionHandling(ex -> ex
                         .authenticationEntryPoint((request, response, e) ->
                                 writeJsonError(response, HttpServletResponse.SC_UNAUTHORIZED,

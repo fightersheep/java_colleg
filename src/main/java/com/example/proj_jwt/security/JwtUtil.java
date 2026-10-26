@@ -4,6 +4,7 @@ import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
+import lombok.Getter;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -20,17 +21,23 @@ import java.util.List;
 public class JwtUtil {
 
     private final SecretKey key;
+    @Getter
     private final long expirationMs;
+    @Getter
+    private final long refreshexpirationMs;
+
 
     public JwtUtil(@Value("${jwt.secret}") String base64Secret,
-                   @Value("${jwt.expiration-ms}") long expirationMs) {
+                   @Value("${jwt.expiration-ms}") long expirationMs,
+                   @Value("${jwt.refreshexpiration-ms}") long refreshexpirationMs) {
         // Throws WeakKeyException if the secret is shorter than 256 bits
         this.key = Keys.hmacShaKeyFor(Decoders.BASE64.decode(base64Secret));
         this.expirationMs = expirationMs;
+        this.refreshexpirationMs = refreshexpirationMs;
     }
 
     /** Called after a successful login. */
-    public String generateToken(UserDetails userDetails) {
+    public String generateAccessToken(UserDetails userDetails) {
         Date now = new Date();
         List<String> roles = userDetails.getAuthorities().stream()
                 .map(GrantedAuthority::getAuthority)
@@ -62,7 +69,14 @@ public class JwtUtil {
         return parseClaims(token).getSubject();
     }
 
-    public long getExpirationMs() {
-        return expirationMs;
+    public String generateRefreshToken(UserDetails userDetails) {
+        Date now = new Date();
+        return Jwts.builder()
+                .subject(userDetails.getUsername())                 // "sub"
+                .issuedAt(now)                                      // "iat"
+                .expiration(new Date(now.getTime() + refreshexpirationMs)) // "exp"
+                .signWith(key)                                      // HS256 for a 256-bit key
+                .compact();                                         // header.payload.signature
     }
+
 }
